@@ -1,0 +1,6 @@
+__pycache__/
+PyMaxflow/
+*.npy
+saved_npy/
+*.bin
+test.py
