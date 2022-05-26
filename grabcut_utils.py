@@ -23,7 +23,13 @@ class GMM():
     def update_(self):
         ''' Update the help variables. '''
         for i in range(self.numComponent):
-            self.inv_sigma[i] = np.linalg.inv(self.sigma[i])
+            while True:
+                try:
+                    self.inv_sigma[i] = np.linalg.inv(self.sigma[i])
+                    break
+                except:
+                    print('singular caught!')
+                    self.inv_sigma[i][0,0] += 1e-4
         for i in range(self.numComponent):
             self.factor[i] = (2.0 * np.pi)**(self.dim / 2.0) * (np.fabs(np.linalg.det(self.sigma[i])))**(0.5)
 

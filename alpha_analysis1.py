@@ -7,20 +7,21 @@ from matplotlib import animation
 plt.ion()
 fig1 = plt.figure('frame')
 # fig2 = plt.figure('subImg')
-src = cv2.imread('imgs/1_src_resized.jpg')
+src = cv2.imread('imgs/3_src_resized.jpg')
 src = cv2.cvtColor(src, cv2.COLOR_BGR2RGB)
-up = 12
-down = -5
-left = 12
-right = -30
-src_cropped = src[up: down, left: right].copy()
+up = 48
+left = 7
+T_height = 199 
+T_width = 150
+src_cropped = src[up: up+T_height, left: left+T_width].copy()
 src_cropped = src_cropped.astype(np.uint8)
-for i in range(1, 9):
+print(src_cropped.shape)
+for i in range(1, 11):
 	# 进行自己的处理
     if i > 1:
         old_a = a
     a = np.load(f'saved_npy/save{i}.npy')
-    a = a.astype(np.uint8)
+    print(a.shape)
     masked_src = cv2.bitwise_or(src_cropped, np.zeros_like(src_cropped), mask=a)
     if i > 1:
         print(np.sum(np.abs(old_a - a)))
