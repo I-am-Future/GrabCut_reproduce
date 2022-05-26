@@ -15,19 +15,22 @@ left = 12
 right = -30
 src_cropped = src[up: down, left: right].copy()
 src_cropped = src_cropped.astype(np.uint8)
-for i in range(1, 10):
+for i in range(1, 9):
 	# 进行自己的处理
+    if i > 1:
+        old_a = a
     a = np.load(f'saved_npy/save{i}.npy')
     a = a.astype(np.uint8)
-    masked_src = cv2.bitwise_or(src_cropped, np.zeros_like(src_cropped), mask=1-a)
-
+    masked_src = cv2.bitwise_or(src_cropped, np.zeros_like(src_cropped), mask=a)
+    if i > 1:
+        print(np.sum(np.abs(old_a - a)))
 	#--------动态显示----------#
     ax1 = fig1.add_subplot(1, 1, 1)
     ax1.axis('off')  # 关掉坐标轴
     ax1.imshow(masked_src)
     # ax1.plot(p1[:, 0], p1[:, 1], 'g.')
 	#停顿时间
-    plt.pause(1)
+    plt.pause(0.6)
 	#清除当前画布
     fig1.clf()
 

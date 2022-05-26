@@ -12,14 +12,19 @@ class GMM():
         # mu
         self.mu = np.random.randn(K, dim) + 0.5
         # sigma
-        self.sigma = np.stack([np.eye(self.dim) for _ in range(K)])
+        self.sigma = np.stack([np.diag(np.random.rand(dim)+0.25) for _ in range(K)])
+        # self.sigma = np.stack([np.eye(self.dim) for _ in range(K)])
         # inv_sigma, easy for computing
         self.inv_sigma = np.zeros((K, dim, dim))
-        for i in range(K):
-            self.inv_sigma[i] = np.linalg.inv(self.sigma[i])
         # factor, easy for computing
         self.factor = np.zeros(K)
-        for i in range(K):
+        self.update_()
+
+    def update_(self):
+        ''' Update the help variables. '''
+        for i in range(self.numComponent):
+            self.inv_sigma[i] = np.linalg.inv(self.sigma[i])
+        for i in range(self.numComponent):
             self.factor[i] = (2.0 * np.pi)**(self.dim / 2.0) * (np.fabs(np.linalg.det(self.sigma[i])))**(0.5)
 
     def init_param(self, datas: np.ndarray):
@@ -45,17 +50,10 @@ class GMM():
                 self.mu[i] = mu
                 self.sigma[i] = sigma
                 self.mixCoef[i] = feature_sum[i] / np.sum(feature_sum)
-            for i in range(self.numComponent):
-                self.inv_sigma[i] = np.linalg.inv(self.sigma[i])
-            for i in range(self.numComponent):
-                self.factor[i] = (2.0 * np.pi)**(self.dim / 2.0) * (np.fabs(np.linalg.det(self.sigma[i])))**(0.5)
-
-            if (norm_ := np.linalg.norm(self.sigma - old_sigma).flatten()) < 2e-2:
-                print(f"EM's sigma difference at {epoch} is {norm_} smaller than 2E-2, exit.")
+            self.update_()
+            if (norm_ := np.linalg.norm(self.sigma - old_sigma).flatten()) < 1.5e-2:
+                print(f"EM's sigma difference at {epoch} is {norm_} smaller than 1.5E-2, exit.")
                 break
-            # if (norm_ := np.linalg.norm(self.mu - old_mu).flatten()) < 5e-5:
-            #     print(f"EM's mu difference at {epoch} is {norm_} smaller than 5E-5, exit.")
-            #     break
             print(f"epoch {epoch} / 100 in EM, {norm_}")
             
     def forward_sum(self, x: np.ndarray) -> float:
@@ -82,9 +80,7 @@ class GMM():
     def __gaussian(self, x: np.ndarray, k: int) -> float:
         ''' Utility function for k_th gaussian in this model. '''
         dx = x - self.mu[k]
-        i_sigma = self.inv_sigma[k]
-        # print(np.dot(np.dot(dx, i_sigma), dx))
-        return np.exp(-0.5 * np.dot(np.dot(dx, i_sigma), dx)) / self.factor[k]
+        return np.exp(-0.5 * np.dot(np.dot(dx, self.inv_sigma[k]), dx)) / self.factor[k]
 
 
 def select_pixels(src: np.ndarray, mat: np.ndarray, sel: int):
