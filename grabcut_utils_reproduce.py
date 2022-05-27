@@ -1,11 +1,12 @@
+# grabcut_utils_reproduce.py
+# My reproduction to the originall article. 
+
 import numpy as np
 from sklearn.cluster import KMeans
 
 class GMM():
     def __init__(self, K: int, dim: int = 3) -> None:
-        ''' A full-covariance Gaussian mixture model implementation. 
-            @param 
-        '''
+        ''' A full-covariance Gaussian mixture model implementation. '''
         self.numComponent = K
         self.dim = dim
         # mixing coefficient
@@ -47,33 +48,6 @@ class GMM():
             self.sigma[k] = np.cov(datas[idx], rowvar=False)
             self.mixCoef[k] = len(datas[idx]) / len(datas)
         self.update_()
-
-        # for epoch in range(100):
-        #     # E
-        #     responses = np.zeros((self.numComponent, datas.shape[0]))
-        #     for i, data in enumerate(datas):
-        #         for k in range(self.numComponent):
-        #             responses[k, i] = self.mixCoef[k] * self.__gaussian(data, k) 
-        #     responses = responses / np.sum(responses,axis=0)
-        #     # M
-        #     old_mu = self.mu.copy()
-        #     old_sigma = self.sigma.copy()
-        #     feature_sum = np.sum(responses, axis=1)
-        #     for i in range(self.numComponent):
-        #         mu = np.dot(responses[i, :], datas) / feature_sum[i]
-        #         sigma = np.zeros((self.dim, self.dim))
-        #         for j in range(datas.shape[0]):
-        #            sigma += responses[i, j] * np.outer(datas[j, :] - mu, datas[j, :] - mu)
-        #         sigma = sigma / feature_sum[i]
-
-        #         self.mu[i] = mu
-        #         self.sigma[i] = sigma
-        #         self.mixCoef[i] = feature_sum[i] / np.sum(feature_sum)
-        #     self.update_()
-        #     if (norm_ := np.linalg.norm(self.sigma - old_sigma).flatten()) < 1.5e-2:
-        #         print(f"EM's sigma difference at {epoch} is {norm_} smaller than 1.5E-2, exit.")
-        #         break
-        #     print(f"epoch {epoch} / 100 in EM, {norm_}")
             
     def forward_sum(self, x: np.ndarray) -> float:
         ''' Forward (sum of all probs) of x in this GM model. '''
@@ -109,6 +83,19 @@ def select_pixels(src: np.ndarray, mat: np.ndarray, sel: int):
     selected = src[idx]
     return selected.reshape(-1, 3)
 
+def get_beta(img: np.ndarray) -> float:
+    ''' '''
+    height, width = img.shape[0], img.shape[1]
+    beta = 0
+    count = 0
+    for h in range(height):  # 0 to height-1
+        for w in range(width):
+            for n_h, n_w in get_neighbors(h, w, height-1, width-1):
+                beta += (img[h, w]-img[n_h, n_w])@(img[h, w]-img[n_h, n_w])
+                count += 1
+    return 1 / (2 * beta / count)
+
+
 def get_neighbors(h: int, w: int, max_h: int, max_w: int) -> list:
     ''' Get 8-direction neighbors from the given index. '''
     result = []
@@ -122,11 +109,6 @@ def get_neighbors(h: int, w: int, max_h: int, max_w: int) -> list:
         result.append((h+1, w))
     return result
 
-# print(get_neighbors(0, 0, 20, 20))
-# print(get_neighbors(0, 10, 20, 20))
-# print(get_neighbors(10, 20, 20, 20))
-# print(get_neighbors(20, 20, 20, 20))
-
 def get_nlink(p_h: int, p_w: int, q_h: int, q_w: int, 
         src: np.ndarray, Alpha: np.ndarray, gamma: float, beta: float):
     ''' get the n-link value. NOTE: p, q are in global coordinates! '''
@@ -139,6 +121,3 @@ def get_stlink(x: np.ndarray, model: GMM):
     ''' get s/t link depends on the model given. p is in global coordinates!'''
     return np.min(model.get_dn(x))
 
-# gmm_back = GMM(5, 3)
-# print(gmm_back.forward_sum(np.array([100,200,100])/255))
-# print(gmm_back.forward_sep(np.array([100,200,100])/255))

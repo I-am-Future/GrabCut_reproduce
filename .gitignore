@@ -1,6 +1,10 @@
 __pycache__/
 PyMaxflow/
-*.npy
 saved_npy/
+
+*.npy
+*.cpp
 *.bin
-test.py
+
+GrabCut_animation.py
+section4.py

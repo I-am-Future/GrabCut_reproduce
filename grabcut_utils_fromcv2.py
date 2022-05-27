@@ -1,12 +1,13 @@
-from unittest import result
+# grabcut_utils_fromcv2.py
+# My reproduction to the GrubCut with OpenCV-C++'s source code. 
+
+import cv2
 import numpy as np
 from sklearn.cluster import KMeans
 
 class GMM():
     def __init__(self) -> None:
-        ''' A full-covariance Gaussian mixture model implementation. 
-            @param 
-        '''
+        ''' A full-covariance Gaussian mixture model implementation. '''
         self.numComponents = 5
         self.dim = 3
         # mixing coefficient
@@ -69,11 +70,6 @@ class GMM():
     def classify(self, x: np.ndarray) -> int:
         ''' Classify which component does x in (maximum prob). '''
         return np.argmax(self.forward_arr(x))
-
-    def get_dn(self, x: np.ndarray) -> float:
-        ''' Forward (seperated probs) of x in this GM model. '''
-        assert( len(x) == self.dim )
-        return -np.log(self.forward_sep(x)+1e-6) - np.log(self.mixCoef)
         
     def init_learning(self):
         ''' Init the help param in learning. '''
@@ -115,6 +111,8 @@ class GMM():
                     self.sigma[k] += np.diag([1e-3]*3)
                 self.update_conv_det(k)
 
+
+
 def calc_beta(img: np.ndarray) -> float:
     ''' '''
     height, width = img.shape[0], img.shape[1]
@@ -135,6 +133,7 @@ def select_pixels(src: np.ndarray, mat: np.ndarray, sel: int):
     selected = src[idx]
     return selected.reshape(-1, 3)
 
+
 def get_neighbors(h: int, w: int, max_h: int, max_w: int) -> list:
     ''' Get 8-direction neighbors from the given index. '''
     result = []
@@ -148,10 +147,6 @@ def get_neighbors(h: int, w: int, max_h: int, max_w: int) -> list:
         result.append((h+1, w))
     return result
 
-# print(get_neighbors(0, 0, 20, 20))
-# print(get_neighbors(0, 10, 20, 20))
-# print(get_neighbors(10, 20, 20, 20))
-# print(get_neighbors(20, 20, 20, 20))
 
 def get_nlink(p_h: int, p_w: int, q_h: int, q_w: int, 
         src: np.ndarray, gamma: float, beta: float):
@@ -159,10 +154,22 @@ def get_nlink(p_h: int, p_w: int, q_h: int, q_w: int,
     diff = src[p_h, p_w] - src[q_h, q_w]
     return gamma * np.exp(-beta * np.dot(diff, diff)) / ((p_h-q_h)**2 + (p_w-q_w)**2)**0.5
 
-def get_stlink(x: np.ndarray, model: GMM):
-    ''' get s/t link depends on the model given. p is in global coordinates!'''
-    return np.min(model.get_dn(x))
 
-# gmm_back = GMM(5, 3)
-# print(gmm_back.forward_sum(np.array([100,200,100])/255))
-# print(gmm_back.forward_sep(np.array([100,200,100])/255))
+def visualization(img: np.ndarray, alpha: np.ndarray) -> None:
+    ''' Visualization of GrabCut (using `alpha` on image `img`). '''
+    masked_img = cv2.bitwise_or(img, np.zeros_like(img), mask=alpha)
+    cv2.imshow('Output', masked_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+class GrabcutInfo():
+    def __init__(self, bkgmodel, fkgmodel, alpha, trimap, g, l, b) -> None:
+        ''' An encapsulated class for passing the GrabCut informations. '''
+        self.bkgmodel = bkgmodel
+        self.fkgmodel = fkgmodel
+        self.alpha = alpha
+        self.trimap = trimap
+        self.gamma = g
+        self.beta = b
+        self.lambda_ = l
