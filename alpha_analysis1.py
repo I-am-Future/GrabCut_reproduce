@@ -9,10 +9,10 @@ fig1 = plt.figure('frame')
 # fig2 = plt.figure('subImg')
 src = cv2.imread('imgs/3_src_resized.jpg')
 src = cv2.cvtColor(src, cv2.COLOR_BGR2RGB)
-up = 48
-left = 7
-T_height = 199 
-T_width = 150
+up = 14
+left = 12
+T_height = 181
+T_width = 259
 src_cropped = src[up: up+T_height, left: left+T_width].copy()
 src_cropped = src_cropped.astype(np.uint8)
 print(src_cropped.shape)

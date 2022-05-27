@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.cluster import KMeans
 
 class GMM():
     def __init__(self, K: int, dim: int = 3) -> None:
@@ -29,38 +30,50 @@ class GMM():
                     break
                 except:
                     print('singular caught!')
-                    self.inv_sigma[i][0,0] += 1e-4
+                    self.sigma[i][0,0] += 1e-4
         for i in range(self.numComponent):
             self.factor[i] = (2.0 * np.pi)**(self.dim / 2.0) * (np.fabs(np.linalg.det(self.sigma[i])))**(0.5)
 
-    def init_param(self, datas: np.ndarray):
+    def init_param(self, datas: np.ndarray) -> None:
         ''' datas: size[N, K]. '''
-        for epoch in range(100):
-            # E
-            responses = np.zeros((self.numComponent, datas.shape[0]))
-            for i, data in enumerate(datas):
-                for k in range(self.numComponent):
-                    responses[k, i] = self.mixCoef[k] * self.__gaussian(data, k) 
-            responses = responses / np.sum(responses,axis=0)
-            # M
-            old_mu = self.mu.copy()
-            old_sigma = self.sigma.copy()
-            feature_sum = np.sum(responses, axis=1)
-            for i in range(self.numComponent):
-                mu = np.dot(responses[i, :], datas) / feature_sum[i]
-                sigma = np.zeros((self.dim, self.dim))
-                for j in range(datas.shape[0]):
-                   sigma += responses[i, j] * np.outer(datas[j, :] - mu, datas[j, :] - mu)
-                sigma = sigma / feature_sum[i]
+        kmeans = KMeans(n_clusters=self.numComponent)
+        clusters = kmeans.fit_predict(datas)
+        print(clusters)
+        for k in range(self.numComponent):
+            idx = (clusters == k)
+            if len(idx) == 0:
+                continue
+            self.mu[k] = np.mean(datas[idx], axis=0)
+            self.sigma[k] = np.cov(datas[idx], rowvar=False)
+            self.mixCoef[k] = len(datas[idx]) / len(datas)
+        self.update_()
 
-                self.mu[i] = mu
-                self.sigma[i] = sigma
-                self.mixCoef[i] = feature_sum[i] / np.sum(feature_sum)
-            self.update_()
-            if (norm_ := np.linalg.norm(self.sigma - old_sigma).flatten()) < 1.5e-2:
-                print(f"EM's sigma difference at {epoch} is {norm_} smaller than 1.5E-2, exit.")
-                break
-            print(f"epoch {epoch} / 100 in EM, {norm_}")
+        # for epoch in range(100):
+        #     # E
+        #     responses = np.zeros((self.numComponent, datas.shape[0]))
+        #     for i, data in enumerate(datas):
+        #         for k in range(self.numComponent):
+        #             responses[k, i] = self.mixCoef[k] * self.__gaussian(data, k) 
+        #     responses = responses / np.sum(responses,axis=0)
+        #     # M
+        #     old_mu = self.mu.copy()
+        #     old_sigma = self.sigma.copy()
+        #     feature_sum = np.sum(responses, axis=1)
+        #     for i in range(self.numComponent):
+        #         mu = np.dot(responses[i, :], datas) / feature_sum[i]
+        #         sigma = np.zeros((self.dim, self.dim))
+        #         for j in range(datas.shape[0]):
+        #            sigma += responses[i, j] * np.outer(datas[j, :] - mu, datas[j, :] - mu)
+        #         sigma = sigma / feature_sum[i]
+
+        #         self.mu[i] = mu
+        #         self.sigma[i] = sigma
+        #         self.mixCoef[i] = feature_sum[i] / np.sum(feature_sum)
+        #     self.update_()
+        #     if (norm_ := np.linalg.norm(self.sigma - old_sigma).flatten()) < 1.5e-2:
+        #         print(f"EM's sigma difference at {epoch} is {norm_} smaller than 1.5E-2, exit.")
+        #         break
+        #     print(f"epoch {epoch} / 100 in EM, {norm_}")
             
     def forward_sum(self, x: np.ndarray) -> float:
         ''' Forward (sum of all probs) of x in this GM model. '''

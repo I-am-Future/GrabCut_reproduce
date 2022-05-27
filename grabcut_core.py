@@ -27,7 +27,7 @@ def GrabCut_kernel(
             for n_h, n_w in get_neighbors(h, w, height-1, width-1):
                 term_diff.append(np.linalg.norm(src[h, w] - src[n_h, n_w])**2)
     beta = 1 / (2 * sum(term_diff) / len(term_diff))
-    # print(beta)
+    print(beta)
     src = src.astype(np.float32)
     src_cropped = src[up: up+T_height, left: left+T_width].copy()
     print(src.shape)
@@ -66,10 +66,11 @@ def GrabCut_kernel(
                 if a == 0:  # change on back GMM
                     GMM_back.mu[k] = np.mean(pixels, axis=0)
                     GMM_back.sigma[k] = np.cov(pixels, rowvar=False)
+                    GMM_back.mixCoef[k] = len(pixels) / np.sum(Alpha==a)
                 else:  # a == 1
                     GMM_fore.mu[k] = np.mean(pixels, axis=0)
                     GMM_fore.sigma[k] = np.cov(pixels, rowvar=False)
-                GMM_fore.mixCoef[k] = len(pixels) / np.sum(Alpha==a)
+                    GMM_fore.mixCoef[k] = len(pixels) / np.sum(Alpha==a)
         GMM_back.update_()
         GMM_fore.update_()
         ## step 3: Estimate segmentation
@@ -106,11 +107,11 @@ def GrabCut_kernel(
         nonlocal isForeBrush
         if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_LBUTTON:
             if isForeBrush:
-                cv2.circle(fb_matrix, (x, y), 5, (2, ), -1)
-                cv2.circle(display_img, (x, y), 5, (255, 255, 255), -1)
+                cv2.circle(fb_matrix, (x, y), 3, (2, ), -1)
+                cv2.circle(display_img, (x, y), 3, (255, 255, 255), -1)
             else:
-                cv2.circle(fb_matrix, (x, y), 5, (0, ), -1)
-                cv2.circle(display_img, (x, y), 5, (0, 0, 255), -1)
+                cv2.circle(fb_matrix, (x, y), 3, (0, ), -1)
+                cv2.circle(display_img, (x, y), 3, (0, 0, 255), -1)
             cv2.imshow('Editing', display_img)
     while True:  # every whole iteration
         fb_matrix = np.ones((T_height, T_width), np.uint8)
@@ -121,19 +122,48 @@ def GrabCut_kernel(
         cv2.namedWindow('Editing')
         cv2.setMouseCallback('Editing', callback)
         cv2.imshow('Editing', display_img)
-
+        
         while True:
-            if cv2.waitKey(2)&0xFF==ord('s'):
+            if cv2.waitKey(1)&0xFF==ord('s'):
                 print('Saved changes to Alpha')
                 cv2.destroyAllWindows()
                 # do something on Alpha and Trimap
-                Trimap[up: up+T_height, left: left+T_width] = fb_matrix
+                diff = Trimap[up: up+T_height, left: left+T_width] != fb_matrix
+                Trimap[up: up+T_height, left: left+T_width][diff] = fb_matrix[diff]
                 Alpha[up: up+T_height, left: left+T_width][fb_matrix==0] = 0
                 Alpha[up: up+T_height, left: left+T_width][fb_matrix==2] = 1
                 cv2.imshow('out', Trimap*128)
                 cv2.imshow('out1', Alpha*255)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
+                print('step 1 revisit')
+                k_vec = np.ones_like(Trimap) * -1  # k vector
+                for h in range(height):
+                    for w in range(width):
+                        if Trimap[h, w] == 1:  # in T_u
+                            if Alpha[h, w] == 1:
+                                D_n = GMM_fore.get_dn(src[h, w]/255)
+                            else:  # == 0
+                                D_n = GMM_back.get_dn(src[h, w]/255)
+                            index = np.argmin(D_n)
+                            k_vec[h, w] = index
+                print('step 2 revisit')
+                for a in range(2):
+                    for k in range(5):
+                        pixels = src[ (Alpha==a) & (k_vec==k) ] / 255  # shape: m * 3
+                        if len(pixels) == 0:
+                            continue
+                        if a == 0:  # change on back GMM
+                            GMM_back.mu[k] = np.mean(pixels, axis=0)
+                            GMM_back.sigma[k] = np.cov(pixels, rowvar=False)
+                            GMM_back.mixCoef[k] = len(pixels) / np.sum(Alpha==a)
+                        else:  # a == 1
+                            GMM_fore.mu[k] = np.mean(pixels, axis=0)
+                            GMM_fore.sigma[k] = np.cov(pixels, rowvar=False)
+                            GMM_fore.mixCoef[k] = len(pixels) / np.sum(Alpha==a)
+                GMM_back.update_()
+                GMM_fore.update_()
+                print('step 3 revisit')
                 g = maxflow.Graph[float]()
                 nodeids = g.add_grid_nodes((T_height, T_width))
                 for t_h in range(T_height):  # 0 to T_height-1
@@ -160,27 +190,28 @@ def GrabCut_kernel(
                         new_alpha[fb_matrix==1]
 
                 break
-            elif cv2.waitKey(2)&0xFF==ord('a'):
+            elif cv2.waitKey(1)&0xFF==ord('a'):
                 print('Abondon the change')
                 cv2.destroyAllWindows()
                 break
-            elif cv2.waitKey(2)&0xFF==ord('b'):
+            elif cv2.waitKey(1)&0xFF==ord('b'):
                 print('Changing to: background brush')
                 isForeBrush = False
-            elif cv2.waitKey(2)&0xFF==ord('f'):
+            elif cv2.waitKey(1)&0xFF==ord('f'):
                 print('Changing to: foreground brush')
                 isForeBrush = True
-            elif cv2.waitKey(2)&0xFF==ord('q'):
+            elif cv2.waitKey(1)&0xFF==ord('q'):
                 print('Quit the program')
                 cv2.destroyAllWindows()
                 exit()
-            elif cv2.waitKey(2)&0xFF==ord('w'):
+            elif cv2.waitKey(1)&0xFF==ord('w'):
+                np.save('saved_npy/1_mask.npy', Alpha)
                 print('Saving current foreground image')
                 
 
     
 
-img = cv2.imread('imgs/3_src_resized.jpg')
+img = cv2.imread('imgs/1_src_resized.jpg')
 print(img.shape)
 
 left, up, t_width, t_height = cv2.selectROI('roi', img, False, False )
