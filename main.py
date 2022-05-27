@@ -10,7 +10,7 @@ print(img.shape)
 left, up, t_width, t_height = cv2.selectROI('Select fkg', img, False, False )
 cv2.destroyAllWindows()
 
-alpha = grabcut_core_fromcv2.GrabCut_kernel(img, up, left, t_height, t_width, 5, True)
+alpha = grabcut_core_fromcv2.GrabCut_kernel(img, up, left, t_height, t_width, 5, True) # True means with editing UI
 
 grabcut_core_fromcv2.visualization(img, alpha)
 
