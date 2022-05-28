@@ -112,10 +112,11 @@ def get_neighbors(h: int, w: int, max_h: int, max_w: int) -> list:
 def get_nlink(p_h: int, p_w: int, q_h: int, q_w: int, 
         src: np.ndarray, Alpha: np.ndarray, gamma: float, beta: float):
     ''' get the n-link value. NOTE: p, q are in global coordinates! '''
-    if Alpha[p_h, p_w] == Alpha[q_h, q_w]:
-        return 0
-    else:
-        return gamma * np.exp(-beta * np.linalg.norm(src[p_h, p_w] - src[q_h, q_w]) ** 2)
+    # if Alpha[p_h, p_w] == Alpha[q_h, q_w]:
+    #     return 0
+    # else:
+    #     return gamma * np.exp(-beta * np.linalg.norm(src[p_h, p_w] - src[q_h, q_w]) ** 2)
+    return gamma * np.exp(-beta * np.linalg.norm(src[p_h, p_w] - src[q_h, q_w]) ** 2) / ((p_h-q_h)**2 + (p_w-q_w)**2)**0.5
 
 def get_stlink(x: np.ndarray, model: GMM):
     ''' get s/t link depends on the model given. p is in global coordinates!'''

@@ -97,4 +97,14 @@ def GrabCut_kernel(
         Alpha[up: up+T_height, left: left+T_width] = new_alpha
         print(f'epoch {epoch+1} of {n_epoches}')
     
+    return Alpha
 
+
+
+# img = cv2.imread('imgs/1_src_resized.jpg')
+# print(img.shape)
+
+# left, up, t_width, t_height = cv2.selectROI('Select fkg', img, False, False )
+# cv2.destroyAllWindows()
+
+# GrabCut_kernel(img, up, left, t_height, t_width, 40)
